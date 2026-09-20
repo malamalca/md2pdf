@@ -8,3 +8,4 @@ cpp/md4c/*
 *.lock
 vendor/*
 tmp/*
+typora-plugin-publish/node_modules/*

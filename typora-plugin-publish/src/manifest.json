@@ -1,0 +1,12 @@
+{
+  "id": "arhim.publish-pdf",
+  "name": "Publish PDF",
+  "description": "Vprasa, kam shraniti, in z md2pdf.exe izvozi odprti markdown v PDF.",
+  "author": "ARHIM d.o.o.",
+  "authorUrl": "https://www.arhim.si",
+  "repo": "arhim/typora-plugin-publish",
+  "version": "2.2.0",
+  "minAppVersion": "1.5.0",
+  "minCoreVersion": "2.10.0",
+  "platforms": ["win32"]
+}

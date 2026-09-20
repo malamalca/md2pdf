@@ -1,0 +1,21 @@
+{
+  "private": true,
+  "name": "typora-plugin-publish",
+  "version": "1.0.0",
+  "description": "Typora plugin: publish the open markdown file to PDF via publish.bat",
+  "type": "module",
+  "scripts": {
+    "build": "node build.js --prod",
+    "build:dev": "node build.js",
+    "install:plugin": "node install.js"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@typora-community-plugin/core": "^2.10.23",
+    "@types/typora": "npm:@typora-community-plugin/typora-types@^1.0.16",
+    "esbuild": "^0.21.5",
+    "esbuild-plugin-typora": "npm:@typora-community-plugin/esbuild-plugin-typora@^1.0.12",
+    "typescript": "^5.4.5"
+  }
+}
