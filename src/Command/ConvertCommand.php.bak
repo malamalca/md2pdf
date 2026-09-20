@@ -1,0 +1,184 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Command;
+
+use App\Core\PdfEngine;
+use Michelf\MarkdownExtra as Markdown;
+
+/**
+ * Convert markdown file to PDF.
+ */
+class ConvertCommand
+{
+    /** @var array<string, mixed> Application config */
+    private array $config;
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    public function __construct(array $config)
+    {
+        $this->config = $config;
+    }
+
+    /**
+     * Run the conversion.
+     *
+     * @param string|null $inputFile Markdown file path
+     * @param array<string|null> $args Additional arguments
+     * @return int Exit code (0 success, 1 error)
+     */
+    public function run(?string $inputFile, ...$args): int
+    {
+        // Parse input file
+        if ($inputFile === null || $inputFile === '') {
+            $this->out('Usage: md2pdf <markdown-file> [--output=<path>] [--header=<html>] [--footer=<html>]', 'error');
+            return 1;
+        }
+
+        // Resolve input path
+        if (!file_exists($inputFile)) {
+            $this->out(sprintf('File not found: %s', $inputFile), 'error');
+            return 1;
+        }
+
+        // Parse arguments
+        $outputFile = null;
+        $headerOverride = null;
+        $footerOverride = null;
+        $noHeader = false;
+        $noFooter = false;
+
+        foreach ($args as $arg) {
+            if (is_string($arg)) {
+                if (str_starts_with($arg, '--output=')) {
+                    $outputFile = substr($arg, 9);
+                } elseif (str_starts_with($arg, '--header=')) {
+                    $headerOverride = substr($arg, 9);
+                } elseif (str_starts_with($arg, '--footer=')) {
+                    $footerOverride = substr($arg, 10);
+                } elseif ($arg === '--no-header') {
+                    $noHeader = true;
+                } elseif ($arg === '--no-footer') {
+                    $noFooter = true;
+                }
+            }
+        }
+
+        // Default output: same directory, .pdf extension
+        if ($outputFile === null) {
+            $basePath = pathinfo($inputFile, PATHINFO_DIRNAME) . DS .
+                        pathinfo($inputFile, PATHINFO_FILENAME) . '.pdf';
+            $outputFile = $basePath;
+        }
+
+        $this->out(sprintf('Input:  %s', $inputFile), 'info');
+        $this->out(sprintf('Output: %s', $outputFile), 'info');
+
+        // Read markdown
+        $markdownContent = file_get_contents($inputFile);
+        if ($markdownContent === false) {
+            $this->out(sprintf('Cannot read file: %s', $inputFile), 'error');
+            return 1;
+        }
+
+        // Convert markdown to HTML
+        $md = new Markdown();
+        $htmlContent = $md->transform($markdownContent);
+
+        // Replace page break markers with CSS page-break divs
+        $htmlContent = str_replace(
+            '<!-- NEW PAGE -->',
+            '<div style="page-break-after:always"></div>',
+            $htmlContent
+        );
+
+        // Resolve source directory
+        $resolvedPath = realpath($inputFile);
+        $sourceDir = $resolvedPath !== false ? pathinfo($resolvedPath, PATHINFO_DIRNAME) : pathinfo($inputFile, PATHINFO_DIRNAME);
+
+        // Load header/footer templates (CLI args override)
+        $headerTemplate = '';
+        $footerTemplate = '';
+
+        if (!$noHeader) {
+            $headerFile = TEMPLATES . 'header.html';
+            if ($headerOverride !== null) {
+                $headerTemplate = $headerOverride;
+            } elseif (file_exists($headerFile)) {
+                $headerTemplate = file_get_contents($headerFile);
+            }
+        }
+
+        if (!$noFooter) {
+            $footerFile = TEMPLATES . 'footer.html';
+            if ($footerOverride !== null) {
+                $footerTemplate = $footerOverride;
+            } elseif (file_exists($footerFile)) {
+                $footerTemplate = file_get_contents($footerFile);
+            }
+        }
+
+        // Create PDF engine
+        $chromeOptions = $this->config['chrome'] ?? [];
+        $pdfOptions = $this->config['pdf'] ?? [];
+        $engineOptions = array_merge($pdfOptions, $chromeOptions);
+
+        $engine = new PdfEngine($engineOptions);
+
+        // Build full document from template (resolve media paths)
+        PdfEngine::$missingMedia = [];
+        $fullHtml = $engine->buildDocument($htmlContent, [], $sourceDir);
+
+        // Report missing media
+        if (!empty(PdfEngine::$missingMedia)) {
+            $unique = array_unique(PdfEngine::$missingMedia);
+            foreach ($unique as $missing) {
+                $this->out(sprintf('Warning: media not found: %s', $missing), 'warning');
+            }
+        }
+
+        // Convert to PDF
+        $this->out('Converting...', 'info');
+
+        try {
+            $result = $engine->convert($fullHtml, $outputFile, $headerTemplate, $footerTemplate);
+
+            if ($result) {
+                $size = filesize($outputFile);
+                $this->out(sprintf('Done. PDF saved (%d bytes)', $size), 'success');
+                return 0;
+            } else {
+                $this->out('Conversion failed: ' . $engine->getError(), 'error');
+                return 1;
+            }
+        } catch (\Exception $e) {
+            $this->out('Error: ' . $e->getMessage(), 'error');
+            return 1;
+        }
+    }
+
+    /**
+     * Print colored output to console.
+     *
+     * @param string $str
+     * @param string $type info|success|error|warning
+     */
+    private function out(string $str, string $type = 'info'): void
+    {
+        switch ($type) {
+            case 'error':
+                echo "\033[31m$str\033[0m\n";
+                break;
+            case 'success':
+                echo "\033[32m$str\033[0m\n";
+                break;
+            case 'warning':
+                echo "\033[33m$str\033[0m\n";
+                break;
+            default:
+                echo "\033[36m$str\033[0m\n";
+        }
+    }
+}

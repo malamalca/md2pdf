@@ -1,0 +1,49 @@
+{
+    "name": "malamalca/md2pdf",
+    "description": "Markdown to PDF converter",
+    "homepage": "https://github.com/malamalca/md2pdf",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Malamalca",
+            "email": "miha@malamalca.com"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "michelf/php-markdown": "^2.0",
+        "chrome-php/chrome": "^1.15"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "*",
+        "cakephp/cakephp-codesniffer": "^4.5",
+        "phpunit/phpunit": "^10.1",
+        "phpstan/phpstan": "^1.10"
+    },
+    "bin": [
+        "bin/md2pdf.php"
+    ],
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "cs-check": "phpcs --colors -p -s",
+        "cs-fix": "phpcbf --colors",
+        "stan": "phpstan analyse src/",
+        "test": "phpunit --colors=always",
+        "psalm": "psalm",
+        "check": [
+            "@test",
+            "@cs-check",
+            "@stan"
+        ]
+    }
+}

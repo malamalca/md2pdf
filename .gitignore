@@ -1,0 +1,10 @@
+Build/*
+.DS_Store
+.vscode
+out/*
+CMakeUserPresets.json
+cpp/build/*
+cpp/md4c/*
+*.lock
+vendor/*
+tmp/*
